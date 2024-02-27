@@ -3,43 +3,34 @@ import confetti from 'canvas-confetti'
 
 //componentes
 import { Square } from './components/Square'
-import { TURNS, WINNER_COMBOS } from './constants'
+import { TURNS } from './constants'
+import { checkWinnerFrom } from './logic/board'
+import { WinnerModal } from './components/WinnerModal'
 
 
 function App() {
 
   /* Se utiliza para tene un estado inicla de 9 poisicones 
    y fuera de eso se pone que inica en null */
-  const [board, setBoard] = useState(
-    Array(9).fill(null))
+  const [board, setBoard] = useState(() => {
+    const boardFromStorage = window.localStorage.getItem('board')
+    if(boardFromStorage) return JSON.parse(boardFromStorage)
+    return  Array(9).fill(null)
+    
+   })
 
     //este estado es para cambiar y poner de estado
     //inicial el turno de las X
-    const [turn, setTurn] = useState(TURNS.X)
-
+    const [turn, setTurn] = useState(() => {
+      const turnFromStorage = window.localStorage.getItem('turn')
+      return turnFromStorage ?? TURNS.X      
+    })
+      
     //aqui vamos a crear un estado para 
     //cuando haya un ganador.
     /*utilizamos el null para cuando no hay ganador, false cuando hay un empate
     y el true cuando hay una gandor */
     const [winner, setWinner] = useState(null)
-
-    const checkWinner = (boardToCheck) => {
-      /* Revisamos todas las combinaciones ganadoras
-      para ver si hay un ganador. */
-      for (const combo of WINNER_COMBOS) {
-        const [a, b, c] = combo;
-        if (
-          boardToCheck[a] &&
-          boardToCheck[a] === boardToCheck[b] &&
-          boardToCheck[a] === boardToCheck[c]
-        ){
-          return boardToCheck[a];
-        }
-      }
-
-      //si no tenemos un ganador 
-      return null;
-    }
 
 
     // Aquie reseteamos de nuevo el juego sin que recarguemos 
@@ -48,6 +39,11 @@ function App() {
       setBoard(Array(9).fill(null))
       setTurn(TURNS.O)
       setWinner(null)
+
+      //aqui resetemaos el local storage
+      window.localStorage.removeItem('board')
+      window.localStorage.removeItem('turn')
+
     }
 
     const checkEndGame = (newBoard) => {
@@ -78,8 +74,12 @@ function App() {
        cada vez que se le de click al square */
        setTurn(newTurn);
 
+       //vamos a guardar la partida en local storage
+       window.localStorage.setItem('board', JSON.stringify(newBoard))
+       window.localStorage.setItem('turn', newTurn)
+
        //vamos a revisar si tenemos una ganador.
-       const newWinner = checkWinner(newBoard)
+       const newWinner = checkWinnerFrom(newBoard)
        if (newWinner){
         //esto sirve ue cuanado alla un ganador salga el confetti
         confetti()
@@ -94,8 +94,11 @@ function App() {
 
     //la etiqueta main es el tablero 
     <main className='board'>
+
       <h1>Tic tac toe</h1>
+
       <button onClick={resetGame}>Reset of Game</button>
+
       <section className='game'>
         {
           board.map((_, index) => {
@@ -111,33 +114,14 @@ function App() {
           })
         }
       </section>
+
       <section className='turn'>
         <Square isSelected={turn === TURNS.X}>{TURNS.X}</Square>
         <Square isSelected={turn === TURNS.O}>{TURNS.O}</Square>
       </section>
 
-      {
-        winner !== null &&  (
-          <section className='winner'>
-            <div className='text'>
-              <h2>
-                {
-                  winner === false
-                  ? 'Empate' 
-                  : 'Gano'
-                }
-                </h2>
-                <header className='win'>
-                  { winner && <Square>{winner}</Square>}
-                </header>
+        <WinnerModal resetGame={resetGame} winner={winner}/>
 
-                <footer>
-                  <button onClick={resetGame}>New Game</button>
-                </footer>
-            </div>
-          </section>
-        )
-      }
     </main>
   )
 }
